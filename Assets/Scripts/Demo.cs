@@ -16,6 +16,11 @@ public interface IService
 {
 }
 
+public interface IServiceNext
+{
+}
+
+
 public enum State
 {
     Alive,
@@ -57,20 +62,36 @@ public class Service : IService
     }
 }
 
-// Let's glue all together
+public class ServiceNext : IServiceNext
+{
+    public ServiceNext(IService service)
+    {
+    }
+}
 
 internal partial class Composition
 {
-    // In fact, this code is never run, and the method can have any name or be a constructor, for example,
-    // and can be in any part of the compiled code because this is just a hint to set up an object graph.
-    // Here the setup is part of the generated class, just as an example.
-    private void Setup() => DI.Setup()
-        .Bind<ICat>().To<ShroedingersCat>()
-        // Represents a cardboard box with any content
-        .Bind<IBox<TT>>().To<CardboardBox<TT>>()
-        .Bind<IService>().To<Service>()
-        // Composition Root
-        .Root<Demo>("Context");
+    private void Setup()
+    {
+        var e = DI.Setup()
+            .Bind<ICat>().As(Lifetime.Singleton).To<ShroedingersCat>()
+            // Represents a cardboard box with any content
+            .Bind<IBox<TT>>().As(Lifetime.Singleton).To<CardboardBox<TT>>()
+            .Bind<IService>().As(Lifetime.Singleton).To<Service>()
+            .Bind<IServiceNext>().As(Lifetime.Singleton).To<ServiceNext>()
+            .Bind<DemoMonoBehaviourRuntime>().As(Lifetime.Singleton).To((ctx) =>
+            {
+                var gameObject = new UnityEngine.GameObject("DemoMonoBehaviourRuntime");
+                var demoMonoBehaviour = gameObject.AddComponent<DemoMonoBehaviourRuntime>();
+
+                // var service = ??? // TODO: How to resolve service?
+                //demoMonoBehaviour.Inject(service);
+
+                return demoMonoBehaviour;
+            })
+            // Composition Root
+            .Root<Demo>("Context");
+    }
 }
 
 public class Demo
@@ -78,16 +99,16 @@ public class Demo
     private static Composition _composition;
 
     private readonly IBox<ICat> _box;
-    private readonly IService _service;
+    private readonly IServiceNext _serviceNext;
+    private readonly DemoMonoBehaviourRuntime _demoInstanceMonoBehaviour;
 
-    public Demo(IBox<ICat> box, IService service)
+    public Demo(IBox<ICat> box, IServiceNext serviceNext, DemoMonoBehaviourRuntime demoInstanceMonoBehaviour)
     {
         _box = box;
-        _service = service;
+        _serviceNext = serviceNext;
+        _demoInstanceMonoBehaviour = demoInstanceMonoBehaviour;
     }
 
-    // Composition Root, a single place in an application
-    // where the composition of the object graphs for an application take place
     public static void Initialize()
     {
         _composition = new Composition();
@@ -97,16 +118,7 @@ public class Demo
     private void Run()
     {
         Debug.Log(_box);
-
-        try
-        {
-            var service = _composition.Resolve<IService>();
-
-            Debug.Log(service);
-        }
-        catch (Exception e)
-        {
-            Debug.LogException(e);
-        }
+        Debug.Log(_serviceNext);
+        Debug.Log(_demoInstanceMonoBehaviour);
     }
 }
