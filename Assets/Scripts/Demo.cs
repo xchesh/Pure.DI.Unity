@@ -57,7 +57,7 @@ public class ShroedingersCat : ICat
 
 public class Service : IService
 {
-    public Service()
+    public Service(DemoMonoBehaviourRuntime demoMonoBehaviourRuntime)
     {
     }
 }
@@ -73,7 +73,7 @@ internal partial class Composition
 {
     private void Setup()
     {
-        var e = DI.Setup()
+        DI.Setup()
             .Bind<ICat>().As(Lifetime.Singleton).To<ShroedingersCat>()
             // Represents a cardboard box with any content
             .Bind<IBox<TT>>().As(Lifetime.Singleton).To<CardboardBox<TT>>()
@@ -84,13 +84,12 @@ internal partial class Composition
                 var gameObject = new UnityEngine.GameObject("DemoMonoBehaviourRuntime");
                 var demoMonoBehaviour = gameObject.AddComponent<DemoMonoBehaviourRuntime>();
 
-                // var service = ??? // TODO: How to resolve service?
-                //demoMonoBehaviour.Inject(service);
-
+                ctx.BuildUp(demoMonoBehaviour);
                 return demoMonoBehaviour;
             })
             // Composition Root
-            .Root<Demo>("Context");
+            .Root<Demo>("Context")
+            .Builders<MonoBehaviour>();
     }
 }
 
